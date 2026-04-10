@@ -1,129 +1,99 @@
-<!// ========== LOGIN SYSTEM ==========
-let currentUser = null;
-let currentRole = null;
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-function login() {
-  const role = document.getElementById('userRole').value;
-  const user = document.getElementById('username').value.trim();
-  const pass = document.getElementById('password').value;
-  
-  if(role === 'teacher' && user === 'teacher' && pass === '1234') {
-    currentUser = user;
-    currentRole = 'teacher';
-    showApp();
-  } else if(role === 'student') {
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    const student = students.find(s => s.id === user && pass === '1234');
-    if(student) {
-      currentUser = user;
-      currentRole = 'student';
-      showApp();
-      document.getElementById('students').style.display = 'none';
-      document.getElementById('courses').style.display = 'none';
-      document.getElementById('faculty').style.display = 'none';
-      document.getElementById('enroll').style.display = 'none';
-      document.getElementById('saveAttBtn')?.remove();
-      showTab('attendance');
-    } else {
-      document.getElementById('loginError').innerText = 'Invalid Roll No or Password';
-    }
-  } else {
-    document.getElementById('loginError').innerText = 'Invalid Username or Password';
-  }
-}
+<div id="loginScreen" style="max-width:400px; margin:50px auto; padding:20px; background:#fff; color:#000; border-radius:8px;">
+  <h2>Login</h2>
+  <select id="userRole">
+    <option value="teacher">Teacher</option>
+    <option value="student">Student</option>
+  </select>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="loginError" style="color:red"></p>
+</div>
 
-function showApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('reportMonth').value = new Date().getMonth() + 1;
-  loadAttendance();
-  localStorage.setItem('loggedIn', JSON.stringify({user: currentUser, role: currentRole}));
-}
+<div id="app" style="display:none">
+  <h1>Student Management System</h1>
+  <button onclick="logout()" id="logoutBtn" style="float:right;">Logout</button>
 
-function logout() {
-  localStorage.removeItem('loggedIn');
-  location.reload();
-}
+  <div class="tabs">
+    <button onclick="showTab('students')">Students</button>
+    <button onclick="showTab('courses')">Courses</button>
+    <button onclick="showTab('faculty')">Faculty</button>
+    <button onclick="showTab('enroll')">Course Registration</button>
+    <button onclick="showTab('marks')">Marks & Results</button>
+    <button onclick="showTab('attendance')" id="attendanceTabBtn">Attendance</button>
+  </div>
 
-// ========== ATTENDANCE SYSTEM ==========
-function loadAttendance() {
-  const date = document.getElementById('attendanceDate').value;
-  const students = JSON.parse(localStorage.getItem('students') || '[]');
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
-  const dayData = attendance[date] || {};
-  
-  let html = '<table border="1" style="width:100%; border-collapse:collapse; text-align:left"><tr><th>Roll No</th><th>Name</th><th>Present</th></tr>';
-  students.forEach(s => {
-    const checked = dayData[s.id]? 'checked' : '';
-    const disabled = currentRole === 'student'? 'disabled' : '';
-    html += `<tr><td>${s.id}</td><td>${s.name}</td><td><input type="checkbox" class="attCheck" data-roll="${s.id}" ${checked} ${disabled}></td></tr>`;
-  });
-  html += '</table>';
-  document.getElementById('attendanceList').innerHTML = html;
-  loadMonthlyReport();
-}
+  <div id="students" class="tab">
+    <h2>Add/Update Student</h2>
+    <input id="s_id" placeholder="Student ID">
+    <input id="s_name" placeholder="Name">
+    <input id="s_phone" placeholder="Phone">
+    <button onclick="addStudent()">Save Student</button>
+    <div id="student_list"></div>
+  </div>
 
-function saveAttendance() {
-  if(currentRole!== 'teacher') {
-    alert('Only teachers can mark attendance');
-    return;
-  }
-  const date = document.getElementById('attendanceDate').value;
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
-  attendance[date] = {};
-  document.querySelectorAll('.attCheck').forEach(box => {
-    attendance[date][box.dataset.roll] = box.checked;
-  });
-  localStorage.setItem('attendance', JSON.stringify(attendance));
-  alert('Attendance saved for ' + date);
-  loadMonthlyReport();
-}
+  <div id="courses" class="tab" style="display:none">
+    <h2>Courses</h2>
+    <input id="c_id" placeholder="Course ID">
+    <input id="c_name" placeholder="Course Name">
+    <input id="c_credits" placeholder="Credits">
+    <button onclick="addCourse()">Save Course</button>
+    <div id="course_list"></div>
+  </div>
 
-function loadMonthlyReport() {
-  const month = document.getElementById('reportMonth').value;
-  const year = new Date().getFullYear();
-  const students = JSON.parse(localStorage.getItem('students') || '[]');
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
-  
-  let totalDays = 0;
-  for(let d in attendance) {
-    if(d.startsWith(`${year}-${String(month).padStart(2,'0')}`)) totalDays++;
-  }
-  
-  let html = `<p><b>Total working days in month: ${totalDays}</b></p>`;
-  html += '<table border="1" style="width:100%; border-collapse:collapse; text-align:left"><tr><th>Roll No</th><th>Name</th><th>Present Days</th><th>Percentage</th></tr>';
-  
-  students.forEach(s => {
-    let presentCount = 0;
-    for(let d in attendance) {
-      if(d.startsWith(`${year}-${String(month).padStart(2,'0')}`) && attendance[d][s.id]) {
-        presentCount++;
-      }
-    }
-    const percent = totalDays > 0? ((presentCount/totalDays)*100).toFixed(1) : 0;
-    const showRow = currentRole === 'teacher' || (currentRole === 'student' && currentUser === s.id);
-    if(showRow) {
-      html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${presentCount}</td><td>${percent}%</td></tr>`;
-    }
-  });
-  html += '</table>';
-  document.getElementById('monthlyReport').innerHTML = html;
-}
+  <div id="faculty" class="tab" style="display:none">
+    <h2>Faculty</h2>
+    <input id="f_id" placeholder="Faculty ID">
+    <input id="f_name" placeholder="Name">
+    <input id="f_dept" placeholder="Department">
+    <button onclick="addFaculty()">Save Faculty</button>
+    <div id="faculty_list"></div>
+  </div>
 
-// AUTO LOGIN CHECK
-window.addEventListener('load', function() {
-  const saved = JSON.parse(localStorage.getItem('loggedIn') || 'null');
-  if(saved) {
-    currentUser = saved.user;
-    currentRole = saved.role;
-    document.getElementById('userRole').value = currentRole;
-    document.getElementById('username').value = currentUser;
-    document.getElementById('password').value = '1234';
-    showApp();
-    if(currentRole === 'student') {
-      showTab('attendance');
+  <div id="enroll" class="tab" style="display:none">
+    <h2>Course Registration</h2>
+    <select id="e_student"></select>
+    <select id="e_course"></select>
+    <button onclick="enrollStudent()">Enroll</button>
+    <div id="enroll_list"></div>
+  </div>
 
-    }
-  }
-});
+  <div id="marks" class="tab" style="display:none">
+    <h2>Marks & Results</h2>
+    <select id="m_student"></select>
+    <select id="m_course"></select>
+    <input id="m_marks" placeholder="Marks" type="number">
+    <button onclick="addMarks()">Add Marks</button>
+    <div id="marks_list"></div>
+  </div>
+
+  <div id="attendance" class="tab" style="display:none">
+    <h2>Attendance</h2>
+    <input type="date" id="attendanceDate" onchange="loadAttendance()">
+    <div id="attendanceList"></div>
+    <button onclick="saveAttendance()">Save Attendance</button>
+    <h3>Monthly Report</h3>
+    <select id="reportMonth" onchange="loadMonthlyReport()">
+      <option value="1">Jan</option><option value="2">Feb</option>
+      <option value="3">Mar</option><option value="4">Apr</option>
+      <option value="5">May</option><option value="6">Jun</option>
+      <option value="7">Jul</option><option value="8">Aug</option>
+      <option value="9">Sep</option><option value="10">Oct</option>
+      <option value="11">Nov</option><option value="12">Dec</option>
+    </select>
+    <div id="monthlyReport"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
