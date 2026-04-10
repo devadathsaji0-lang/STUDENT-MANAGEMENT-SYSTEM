@@ -27,6 +27,11 @@ function getGrade(marks) {
   return {grade: 'F', status: 'Fail'};
 }
 
+// ========== EMAIL VALIDATION ==========
+function isValidEmail(email) {
+  return email.includes('@') && email.includes('.');
+}
+
 // ========== LOGIN SYSTEM ==========
 let currentUser = null;
 let currentRole = null;
@@ -46,19 +51,32 @@ function login() {
       document.getElementById('loginError').innerText = 'Invalid teacher credentials';
     }
   } else if(role === 'student') {
-    if(pass === '1234' && user) {
-      let student = db.students.find(s => s.id === user);
-      if(!student) {
-        student = {id: user, name: `Student ${user}`, phone: ""};
-        db.students.push(student);
-        localStorage.setItem('students', JSON.stringify(db.students));
-      }
-      currentUser = user;
-      currentRole = 'student';
-      showApp();
-    } else {
-      document.getElementById('loginError').innerText = 'Password must be 1234';
+    // NEW: Username must be email, any password accepted
+    if(!user) {
+      document.getElementById('loginError').innerText = 'Enter email ID';
+      return;
     }
+    if(!isValidEmail(user)) {
+      document.getElementById('loginError').innerText = 'Student username must be email ID';
+      return;
+    }
+    if(!pass) {
+      document.getElementById('loginError').innerText = 'Enter any password';
+      return;
+    }
+    
+    // Auto-create student with email, accept ANY password
+    let student = db.students.find(s => s.id === user);
+    if(!student) {
+      const name = user.split('@')[0]; // Use part before @ as name
+      student = {id: user, name: name, phone: ""};
+      db.students.push(student);
+      localStorage.setItem('students', JSON.stringify(db.students));
+    }
+    
+    currentUser = user;
+    currentRole = 'student';
+    showApp();
   } else {
     document.getElementById('loginError').innerText = 'Select a role';
   }
@@ -78,7 +96,7 @@ function showApp() {
       const el = document.getElementById(id);
       if(el) el.style.display = 'none';
     });
-    showTab('marks'); // Students see results first
+    showTab('marks');
   }
   
   refreshAll();
@@ -101,6 +119,11 @@ function addStudent() {
     return;
   }
   
+  if(!isValidEmail(id)) {
+    alert('Student ID must be an email');
+    return;
+  }
+  
   const exists = db.students.find(s => s.id === id);
   if(exists) {
     exists.name = name;
@@ -118,7 +141,7 @@ function addStudent() {
 
 function refreshStudents() {
   db.students = JSON.parse(localStorage.getItem('students') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>ID</th><th>Name</th><th>Phone</th></tr>';
+  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>Email ID</th><th>Name</th><th>Phone</th></tr>';
   db.students.forEach(s => {
     html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.phone}</td></tr>`;
   });
@@ -191,7 +214,7 @@ function enrollStudent() {
 
 function refreshEnroll() {
   db.enroll = JSON.parse(localStorage.getItem('enroll') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>Student</th><th>Course</th></tr>';
+  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>Student Email</th><th>Course</th></tr>';
   db.enroll.forEach(e => {
     html += `<tr><td>${e.studentId}</td><td>${e.courseId}</td></tr>`;
   });
@@ -215,7 +238,6 @@ function addMarks() {
     return;
   }
   
-  // Update if exists, else add new
   const existing = db.marks.findIndex(m => m.studentId === studentId && m.courseId === courseId);
   if(existing >= 0) {
     db.marks[existing].marks = marks;
@@ -230,10 +252,9 @@ function addMarks() {
 
 function refreshMarks() {
   db.marks = JSON.parse(localStorage.getItem('marks') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px; border-collapse:collapse"><tr><th>Student</th><th>Course</th><th>Marks</th><th>Grade</th><th>Result</th></tr>';
+  let html = '<table border="1" style="width:100%; margin-top:10px; border-collapse:collapse"><tr><th>Student Email</th><th>Course</th><th>Marks</th><th>Grade</th><th>Result</th></tr>';
   
   db.marks.forEach(m => {
-    // Show only current student's marks if student logged in
     if(currentRole === 'teacher' || currentUser === m.studentId) {
       const g = getGrade(m.marks);
       const color = g.status === 'Pass'? 'green' : 'red';
@@ -256,7 +277,7 @@ function loadAttendance() {
   const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
   const dayData = attendance[date] || {};
   
-  let html = '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>ID</th><th>Name</th><th>Present</th></tr>';
+  let html = '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>Email ID</th><th>Name</th><th>Present</th></tr>';
   db.students.forEach(s => {
     const checked = dayData[s.id]? 'checked' : '';
     const disabled = currentRole === 'student'? 'disabled' : '';
@@ -300,7 +321,7 @@ function loadMonthlyReport() {
   }
   
   let html = `<p><b>Total Working Days: ${totalDays}</b></p>`;
-  html += '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>ID</th><th>Name</th><th>Present</th><th>%</th></tr>';
+  html += '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>Email ID</th><th>Name</th><th>Present</th><th>%</th></tr>';
   
   db.students.forEach(s => {
     let present = 0;
