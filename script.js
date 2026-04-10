@@ -1,12 +1,10 @@
 // ========== DATABASE + DEMO DATA ==========
-// List of teachers - add more emails/usernames here
 const TEACHER_ACCOUNTS = [
   {username: "teacher", password: "1234"},
   {username: "admin", password: "1234"},
   {username: "principal", password: "1234"}
 ];
 
-// Load or create students
 let savedStudents = JSON.parse(localStorage.getItem('students') || '[]');
 
 const db = {
@@ -16,6 +14,18 @@ const db = {
   enroll: JSON.parse(localStorage.getItem('enroll') || '[]'),
   marks: JSON.parse(localStorage.getItem('marks') || '[]')
 };
+
+// ========== GRADE CALCULATION ==========
+function getGrade(marks) {
+  const m = parseInt(marks);
+  if(m >= 90) return {grade: 'A+', status: 'Pass'};
+  if(m >= 80) return {grade: 'A', status: 'Pass'};
+  if(m >= 70) return {grade: 'B+', status: 'Pass'};
+  if(m >= 60) return {grade: 'B', status: 'Pass'};
+  if(m >= 50) return {grade: 'C', status: 'Pass'};
+  if(m >= 40) return {grade: 'D', status: 'Pass'};
+  return {grade: 'F', status: 'Fail'};
+}
 
 // ========== LOGIN SYSTEM ==========
 let currentUser = null;
@@ -27,7 +37,6 @@ function login() {
   const pass = document.getElementById('password').value;
   
   if(role === 'teacher') {
-    // Check if teacher exists in TEACHER_ACCOUNTS list
     const teacher = TEACHER_ACCOUNTS.find(t => t.username === user && t.password === pass);
     if(teacher) {
       currentUser = user;
@@ -37,17 +46,13 @@ function login() {
       document.getElementById('loginError').innerText = 'Invalid teacher credentials';
     }
   } else if(role === 'student') {
-    // Any Roll No works with password 1234
     if(pass === '1234' && user) {
       let student = db.students.find(s => s.id === user);
-      
-      // Auto-create student if first time login
       if(!student) {
         student = {id: user, name: `Student ${user}`, phone: ""};
         db.students.push(student);
         localStorage.setItem('students', JSON.stringify(db.students));
       }
-      
       currentUser = user;
       currentRole = 'student';
       showApp();
@@ -68,13 +73,12 @@ function showApp() {
     role: currentRole
   }));
   
-  // Hide admin tabs for students
   if(currentRole === 'student') {
-    ['students','courses','faculty','enroll','marks'].forEach(id => {
+    ['students','courses','faculty','enroll'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.style.display = 'none';
     });
-    showTab('attendance');
+    showTab('marks'); // Students see results first
   }
   
   refreshAll();
@@ -195,25 +199,52 @@ function refreshEnroll() {
   document.getElementById('enroll_list').innerHTML = html;
 }
 
-// ========== MARKS FUNCTIONS ==========
+// ========== MARKS FUNCTIONS WITH GRADE ==========
 function addMarks() {
   const studentId = document.getElementById('m_student').value;
   const courseId = document.getElementById('m_course').value;
   const marks = document.getElementById('m_marks').value;
+  
   if(!studentId ||!courseId ||!marks) {
     alert('Fill all fields');
     return;
   }
-  db.marks.push({studentId, courseId, marks});
+  
+  if(marks < 0 || marks > 100) {
+    alert('Marks must be 0-100');
+    return;
+  }
+  
+  // Update if exists, else add new
+  const existing = db.marks.findIndex(m => m.studentId === studentId && m.courseId === courseId);
+  if(existing >= 0) {
+    db.marks[existing].marks = marks;
+  } else {
+    db.marks.push({studentId, courseId, marks});
+  }
+  
   localStorage.setItem('marks', JSON.stringify(db.marks));
+  document.getElementById('m_marks').value = '';
   refreshMarks();
 }
 
 function refreshMarks() {
   db.marks = JSON.parse(localStorage.getItem('marks') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>Student</th><th>Course</th><th>Marks</th></tr>';
+  let html = '<table border="1" style="width:100%; margin-top:10px; border-collapse:collapse"><tr><th>Student</th><th>Course</th><th>Marks</th><th>Grade</th><th>Result</th></tr>';
+  
   db.marks.forEach(m => {
-    html += `<tr><td>${m.studentId}</td><td>${m.courseId}</td><td>${m.marks}</td></tr>`;
+    // Show only current student's marks if student logged in
+    if(currentRole === 'teacher' || currentUser === m.studentId) {
+      const g = getGrade(m.marks);
+      const color = g.status === 'Pass'? 'green' : 'red';
+      html += `<tr>
+        <td>${m.studentId}</td>
+        <td>${m.courseId}</td>
+        <td>${m.marks}</td>
+        <td><b>${g.grade}</b></td>
+        <td style="color:${color}"><b>${g.status}</b></td>
+      </tr>`;
+    }
   });
   html += '</table>';
   document.getElementById('marks_list').innerHTML = html;
@@ -292,6 +323,7 @@ function showTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
   document.getElementById(tab).style.display = 'block';
   if(tab === 'attendance') loadAttendance();
+  if(tab === 'marks') refreshMarks();
 }
 
 function refreshAll() {
