@@ -1,71 +1,129 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Student Management System</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<!// ========== LOGIN SYSTEM ==========
+let currentUser = null;
+let currentRole = null;
 
-  <h1>Student Management System</h1>
+function login() {
+  const role = document.getElementById('userRole').value;
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value;
+  
+  if(role === 'teacher' && user === 'teacher' && pass === '1234') {
+    currentUser = user;
+    currentRole = 'teacher';
+    showApp();
+  } else if(role === 'student') {
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    const student = students.find(s => s.id === user && pass === '1234');
+    if(student) {
+      currentUser = user;
+      currentRole = 'student';
+      showApp();
+      document.getElementById('students').style.display = 'none';
+      document.getElementById('courses').style.display = 'none';
+      document.getElementById('faculty').style.display = 'none';
+      document.getElementById('enroll').style.display = 'none';
+      document.getElementById('saveAttBtn')?.remove();
+      showTab('attendance');
+    } else {
+      document.getElementById('loginError').innerText = 'Invalid Roll No or Password';
+    }
+  } else {
+    document.getElementById('loginError').innerText = 'Invalid Username or Password';
+  }
+}
 
-  <div class="tabs">
-    <button onclick="showTab('students')">Students</button>
-    <button onclick="showTab('courses')">Courses</button>
-    <button onclick="showTab('faculty')">Faculty</button>
-    <button onclick="showTab('enroll')">Course Registration</button>
-    <button onclick="showTab('marks')">Marks & Results</button>
-  </div>
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('reportMonth').value = new Date().getMonth() + 1;
+  loadAttendance();
+  localStorage.setItem('loggedIn', JSON.stringify({user: currentUser, role: currentRole}));
+}
 
-  <!-- STUDENTS -->
-  <div id="students" class="tab">
-    <h2>Add/Update Student</h2>
-    <input id="s_id" placeholder="Student ID">
-    <input id="s_name" placeholder="Name">
-    <input id="s_phone" placeholder="Phone">
-    <button onclick="addStudent()">Save Student</button>
-    <div id="student_list"></div>
-  </div>
+function logout() {
+  localStorage.removeItem('loggedIn');
+  location.reload();
+}
 
-  <!-- COURSES -->
-  <div id="courses" class="tab" style="display:none">
-    <h2>Courses</h2>
-    <input id="c_id" placeholder="Course ID">
-    <input id="c_name" placeholder="Course Name">
-    <input id="c_credits" placeholder="Credits">
-    <button onclick="addCourse()">Save Course</button>
-    <div id="course_list"></div>
-  </div>
+// ========== ATTENDANCE SYSTEM ==========
+function loadAttendance() {
+  const date = document.getElementById('attendanceDate').value;
+  const students = JSON.parse(localStorage.getItem('students') || '[]');
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
+  const dayData = attendance[date] || {};
+  
+  let html = '<table border="1" style="width:100%; border-collapse:collapse; text-align:left"><tr><th>Roll No</th><th>Name</th><th>Present</th></tr>';
+  students.forEach(s => {
+    const checked = dayData[s.id]? 'checked' : '';
+    const disabled = currentRole === 'student'? 'disabled' : '';
+    html += `<tr><td>${s.id}</td><td>${s.name}</td><td><input type="checkbox" class="attCheck" data-roll="${s.id}" ${checked} ${disabled}></td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('attendanceList').innerHTML = html;
+  loadMonthlyReport();
+}
 
-  <!-- FACULTY -->
-  <div id="faculty" class="tab" style="display:none">
-    <h2>Faculty</h2>
-    <input id="f_id" placeholder="Faculty ID">
-    <input id="f_name" placeholder="Name">
-    <input id="f_dept" placeholder="Department">
-    <button onclick="addFaculty()">Save Faculty</button>
-    <div id="faculty_list"></div>
-  </div>
+function saveAttendance() {
+  if(currentRole!== 'teacher') {
+    alert('Only teachers can mark attendance');
+    return;
+  }
+  const date = document.getElementById('attendanceDate').value;
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
+  attendance[date] = {};
+  document.querySelectorAll('.attCheck').forEach(box => {
+    attendance[date][box.dataset.roll] = box.checked;
+  });
+  localStorage.setItem('attendance', JSON.stringify(attendance));
+  alert('Attendance saved for ' + date);
+  loadMonthlyReport();
+}
 
-  <!-- ENROLL -->
-  <div id="enroll" class="tab" style="display:none">
-    <h2>Course Registration</h2>
-    <select id="e_student"></select>
-    <select id="e_course"></select>
-    <button onclick="enrollStudent()">Enroll</button>
-    <div id="enroll_list"></div>
-  </div>
+function loadMonthlyReport() {
+  const month = document.getElementById('reportMonth').value;
+  const year = new Date().getFullYear();
+  const students = JSON.parse(localStorage.getItem('students') || '[]');
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
+  
+  let totalDays = 0;
+  for(let d in attendance) {
+    if(d.startsWith(`${year}-${String(month).padStart(2,'0')}`)) totalDays++;
+  }
+  
+  let html = `<p><b>Total working days in month: ${totalDays}</b></p>`;
+  html += '<table border="1" style="width:100%; border-collapse:collapse; text-align:left"><tr><th>Roll No</th><th>Name</th><th>Present Days</th><th>Percentage</th></tr>';
+  
+  students.forEach(s => {
+    let presentCount = 0;
+    for(let d in attendance) {
+      if(d.startsWith(`${year}-${String(month).padStart(2,'0')}`) && attendance[d][s.id]) {
+        presentCount++;
+      }
+    }
+    const percent = totalDays > 0? ((presentCount/totalDays)*100).toFixed(1) : 0;
+    const showRow = currentRole === 'teacher' || (currentRole === 'student' && currentUser === s.id);
+    if(showRow) {
+      html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${presentCount}</td><td>${percent}%</td></tr>`;
+    }
+  });
+  html += '</table>';
+  document.getElementById('monthlyReport').innerHTML = html;
+}
 
-  <!-- MARKS -->
-  <div id="marks" class="tab" style="display:none">
-    <h2>Marks & Results</h2>
-    <select id="m_student"></select>
-    <select id="m_course"></select>
-    <input id="m_marks" placeholder="Marks" type="number">
-    <button onclick="addMarks()">Add Marks</button>
-    <div id="marks_list"></div>
-  </div>
+// AUTO LOGIN CHECK
+window.addEventListener('load', function() {
+  const saved = JSON.parse(localStorage.getItem('loggedIn') || 'null');
+  if(saved) {
+    currentUser = saved.user;
+    currentRole = saved.role;
+    document.getElementById('userRole').value = currentRole;
+    document.getElementById('username').value = currentUser;
+    document.getElementById('password').value = '1234';
+    showApp();
+    if(currentRole === 'student') {
+      showTab('attendance');
 
-  <script src="script.js"></script>
-</body>
-</html>
+    }
+  }
+});
