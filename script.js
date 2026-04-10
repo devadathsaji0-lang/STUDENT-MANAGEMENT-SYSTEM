@@ -1,6 +1,16 @@
-// ========== DATABASE ==========
+// ========== DATABASE + DEMO DATA ==========
+// List of teachers - add more emails/usernames here
+const TEACHER_ACCOUNTS = [
+  {username: "teacher", password: "1234"},
+  {username: "admin", password: "1234"},
+  {username: "principal", password: "1234"}
+];
+
+// Load or create students
+let savedStudents = JSON.parse(localStorage.getItem('students') || '[]');
+
 const db = {
-  students: JSON.parse(localStorage.getItem('students') || '[]'),
+  students: savedStudents,
   courses: JSON.parse(localStorage.getItem('courses') || '[]'),
   faculty: JSON.parse(localStorage.getItem('faculty') || '[]'),
   enroll: JSON.parse(localStorage.getItem('enroll') || '[]'),
@@ -16,21 +26,36 @@ function login() {
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value;
   
-  if(role === 'teacher' && user === 'teacher' && pass === '1234') {
-    currentUser = user;
-    currentRole = 'teacher';
-    showApp();
+  if(role === 'teacher') {
+    // Check if teacher exists in TEACHER_ACCOUNTS list
+    const teacher = TEACHER_ACCOUNTS.find(t => t.username === user && t.password === pass);
+    if(teacher) {
+      currentUser = user;
+      currentRole = 'teacher';
+      showApp();
+    } else {
+      document.getElementById('loginError').innerText = 'Invalid teacher credentials';
+    }
   } else if(role === 'student') {
-    const student = db.students.find(s => s.id === user && pass === '1234');
-    if(student) {
+    // Any Roll No works with password 1234
+    if(pass === '1234' && user) {
+      let student = db.students.find(s => s.id === user);
+      
+      // Auto-create student if first time login
+      if(!student) {
+        student = {id: user, name: `Student ${user}`, phone: ""};
+        db.students.push(student);
+        localStorage.setItem('students', JSON.stringify(db.students));
+      }
+      
       currentUser = user;
       currentRole = 'student';
       showApp();
     } else {
-      document.getElementById('loginError').innerText = 'Invalid ID or Password';
+      document.getElementById('loginError').innerText = 'Password must be 1234';
     }
   } else {
-    document.getElementById('loginError').innerText = 'Invalid login';
+    document.getElementById('loginError').innerText = 'Select a role';
   }
 }
 
@@ -43,12 +68,12 @@ function showApp() {
     role: currentRole
   }));
   
+  // Hide admin tabs for students
   if(currentRole === 'student') {
-    document.getElementById('students').style.display = 'none';
-    document.getElementById('courses').style.display = 'none';
-    document.getElementById('faculty').style.display = 'none';
-    document.getElementById('enroll').style.display = 'none';
-    document.getElementById('marks').style.display = 'none';
+    ['students','courses','faculty','enroll','marks'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
     showTab('attendance');
   }
   
@@ -103,12 +128,10 @@ function addCourse() {
   const id = document.getElementById('c_id').value.trim();
   const name = document.getElementById('c_name').value.trim();
   const credits = document.getElementById('c_credits').value.trim();
-  
   if(!id ||!name) {
     alert('Course ID and Name required');
     return;
   }
-  
   db.courses.push({id, name, credits});
   localStorage.setItem('courses', JSON.stringify(db.courses));
   refreshCourses();
@@ -130,12 +153,10 @@ function addFaculty() {
   const id = document.getElementById('f_id').value.trim();
   const name = document.getElementById('f_name').value.trim();
   const dept = document.getElementById('f_dept').value.trim();
-  
   if(!id ||!name) {
     alert('Faculty ID and Name required');
     return;
   }
-  
   db.faculty.push({id, name, dept});
   localStorage.setItem('faculty', JSON.stringify(db.faculty));
   refreshFaculty();
@@ -155,12 +176,10 @@ function refreshFaculty() {
 function enrollStudent() {
   const studentId = document.getElementById('e_student').value;
   const courseId = document.getElementById('e_course').value;
-  
   if(!studentId ||!courseId) {
     alert('Select both student and course');
     return;
   }
-  
   db.enroll.push({studentId, courseId});
   localStorage.setItem('enroll', JSON.stringify(db.enroll));
   refreshEnroll();
@@ -181,12 +200,10 @@ function addMarks() {
   const studentId = document.getElementById('m_student').value;
   const courseId = document.getElementById('m_course').value;
   const marks = document.getElementById('m_marks').value;
-  
   if(!studentId ||!courseId ||!marks) {
     alert('Fill all fields');
     return;
   }
-  
   db.marks.push({studentId, courseId, marks});
   localStorage.setItem('marks', JSON.stringify(db.marks));
   refreshMarks();
