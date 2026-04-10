@@ -1,87 +1,184 @@
-let db = {
-  students: JSON.parse(localStorage.getItem('students') || '[]'),
-  courses: JSON.parse(localStorage.getItem('courses') || '[]'),
-  faculty: JSON.parse(localStorage.getItem('faculty') || '[]'),
-  enrollments: JSON.parse(localStorage.getItem('enrollments') || '[]'),
-  marks: JSON.parse(localStorage.getItem('marks') || '[]')
+// ========== DATABASE ==========
+const db = {
+  students: JSON.parse(localStorage.getItem('students') || '[]')
 };
 
-function saveDB() {
-  localStorage.setItem('students', JSON.stringify(db.students));
-  localStorage.setItem('courses', JSON.stringify(db.courses));
-  localStorage.setItem('faculty', JSON.stringify(db.faculty));
-  localStorage.setItem('enrollments', JSON.stringify(db.enrollments));
-  localStorage.setItem('marks', JSON.stringify(db.marks));
+// ========== LOGIN SYSTEM ==========
+let currentUser = null;
+let currentRole = null;
+
+function login() {
+  const role = document.getElementById('userRole').value;
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value;
+  
+  if(role === 'teacher' && user === 'teacher' && pass === '1234') {
+    currentUser = user;
+    currentRole = 'teacher';
+    showApp();
+  } else if(role === 'student') {
+    const student = db.students.find(s => s.id === user && pass === '1234');
+    if(student) {
+      currentUser = user;
+      currentRole = 'student';
+      showApp();
+    } else {
+      document.getElementById('loginError').innerText = 'Invalid ID or Password';
+    }
+  } else {
+    document.getElementById('loginError').innerText = 'Invalid login';
+  }
 }
 
-function showTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
-  document.getElementById(id).style.display = 'block';
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+  localStorage.setItem('loggedIn', JSON.stringify({
+    user: currentUser,
+    role: currentRole
+  }));
   refreshAll();
+  loadAttendance();
 }
 
+function logout() {
+  localStorage.removeItem('loggedIn');
+  location.reload();
+}
+
+// ========== STUDENT FUNCTIONS ==========
 function addStudent() {
-  let s = {id: s_id.value, name: s_name.value, phone: s_phone.value};
-  if(!s.id) return alert('Enter Student ID');
-  db.students = db.students.filter(x => x.id !== s.id);
-  db.students.push(s);
-  saveDB(); refreshAll();
-  s_id.value = s_name.value = s_phone.value = '';
+  const id = document.getElementById('s_id').value.trim();
+  const name = document.getElementById('s_name').value.trim();
+  const phone = document.getElementById('s_phone').value.trim();
+  
+  if(!id ||!name) {
+    alert('ID and Name required');
+    return;
+  }
+  
+  const exists = db.students.find(s => s.id === id);
+  if(exists) {
+    exists.name = name;
+    exists.phone = phone;
+  } else {
+    db.students.push({id, name, phone});
+  }
+  
+  localStorage.setItem('students', JSON.stringify(db.students));
+  document.getElementById('s_id').value = '';
+  document.getElementById('s_name').value = '';
+  document.getElementById('s_phone').value = '';
+  refreshStudents();
 }
 
-function addCourse() {
-  let c = {id: c_id.value, name: c_name.value, credits: c_credits.value};
-  if(!c.id) return alert('Enter Course ID');
-  db.courses = db.courses.filter(x => x.id !== c.id);
-  db.courses.push(c);
-  saveDB(); refreshAll();
-  c_id.value = c_name.value = c_credits.value = '';
+function refreshStudents() {
+  db.students = JSON.parse(localStorage.getItem('students') || '[]');
+  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>ID</th><th>Name</th><th>Phone</th></tr>';
+  db.students.forEach(s => {
+    html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.phone}</td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('student_list').innerHTML = html;
+  updateDropdowns();
 }
 
-function addFaculty() {
-  let f = {id: f_id.value, name: f_name.value, dept: f_dept.value};
-  if(!f.id) return alert('Enter Faculty ID');
-  db.faculty = db.faculty.filter(x => x.id !== f.id);
-  db.faculty.push(f);
-  saveDB(); refreshAll();
-  f_id.value = f_name.value = f_dept.value = '';
+// ========== ATTENDANCE SYSTEM ==========
+function loadAttendance() {
+  const date = document.getElementById('attendanceDate').value;
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
+  const dayData = attendance[date] || {};
+  
+  let html = '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>ID</th><th>Name</th><th>Present</th></tr>';
+  db.students.forEach(s => {
+    const checked = dayData[s.id]? 'checked' : '';
+    const disabled = currentRole === 'student'? 'disabled' : '';
+    html += `<tr>
+      <td>${s.id}</td>
+      <td>${s.name}</td>
+      <td><input type="checkbox" class="attCheck" data-id="${s.id}" ${checked} ${disabled}></td>
+    </tr>`;
+  });
+  html += '</table>';
+  document.getElementById('attendanceList').innerHTML = html;
+  loadMonthlyReport();
 }
 
-function enrollStudent() {
-  let e = {sid: e_student.value, cid: e_course.value, date: new Date().toLocaleDateString()};
-  if(!e.sid || !e.cid) return alert('Select both');
-  db.enrollments.push(e);
-  saveDB(); refreshAll();
+function saveAttendance() {
+  if (currentRole!== 'teacher') {
+    alert('Only teacher allowed');
+    return;
+  }
+  const date = document.getElementById('attendanceDate').value;
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
+  attendance[date] = {};
+  document.querySelectorAll('.attCheck').forEach(box => {
+    attendance[date][box.dataset.id] = box.checked;
+  });
+  localStorage.setItem('attendance', JSON.stringify(attendance));
+  alert('Saved!');
+  loadMonthlyReport();
 }
 
-function addMarks() {
-  let marksValue = parseInt(m_marks.value);
-  let grade = marksValue > 90 ? 'A' : marksValue > 75 ? 'B' : 'C';
+function loadMonthlyReport() {
+  const month = document.getElementById('reportMonth').value;
+  const year = new Date().getFullYear();
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
+  let totalDays = 0;
+  
+  for (let d in attendance) {
+    if (d.startsWith(`${year}-${String(month).padStart(2,'0')}`)) {
+      totalDays++;
+    }
+  }
+  
+  let html = `<p><b>Total Working Days: ${totalDays}</b></p>`;
+  html += '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>ID</th><th>Name</th><th>Present</th><th>%</th></tr>';
+  
+  db.students.forEach(s => {
+    let present = 0;
+    for (let d in attendance) {
+      if (d.startsWith(`${year}-${String(month).padStart(2,'0')}`) && attendance[d][s.id]) {
+        present++;
+      }
+    }
+    const percent = totalDays? ((present / totalDays) * 100).toFixed(1) : 0;
+    if (currentRole === 'teacher' || currentUser === s.id) {
+      html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${present}</td><td>${percent}%</td></tr>`;
+    }
+  });
+  html += '</table>';
+  document.getElementById('monthlyReport').innerHTML = html;
+}
 
-  let m = {sid: m_student.value, cid: m_course.value, marks: marksValue, grade: grade};
-
-  if(!m.sid || !m.cid) return alert('Select both');
-  db.marks.push(m);
-  saveDB(); refreshAll();
-  m_marks.value = '';
+// ========== UTILS ==========
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+  document.getElementById(tab).style.display = 'block';
+  if(tab === 'attendance') loadAttendance();
 }
 
 function refreshAll() {
-  e_student.innerHTML = m_student.innerHTML = db.students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  e_course.innerHTML = m_course.innerHTML = db.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-  student_list.innerHTML = tableHTML(db.students, ['id','name','phone']);
-  course_list.innerHTML = tableHTML(db.courses, ['id','name','credits']);
-  faculty_list.innerHTML = tableHTML(db.faculty, ['id','name','dept']);
-  enroll_list.innerHTML = tableHTML(db.enrollments, ['sid','cid','date']);
-  marks_list.innerHTML = tableHTML(db.marks, ['sid','cid','marks','grade']);
+  refreshStudents();
+  // Add other refresh functions here later
 }
 
-function tableHTML(arr, keys) {
-  if(!arr.length) return 'No data';
-  let h = '<table><tr>' + keys.map(k => `<th>${k}</th>`).join('') + '</tr>';
-  let r = arr.map(o => '<tr>' + keys.map(k => `<td>${o[k]}</td>`).join('') + '</tr>').join('');
-  return h + r + '</table>';
+function updateDropdowns() {
+  // For enrollment/marks tabs later
 }
 
-refreshAll();
+// ========== AUTO LOGIN ==========
+window.onload = function () {
+  const saved = JSON.parse(localStorage.getItem('loggedIn') || 'null');
+  if (saved) {
+    currentUser = saved.user;
+    currentRole = saved.role;
+    document.getElementById('userRole').value = currentRole;
+    document.getElementById('username').value = currentUser;
+    document.getElementById('password').value = '1234';
+    showApp();
+  }
+  document.getElementById('reportMonth').value = new Date().getMonth() + 1;
+  refreshAll();
+};
