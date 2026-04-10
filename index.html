@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Student Management System</h1>
+
+  <div class="tabs">
+    <button onclick="showTab('students')">Students</button>
+    <button onclick="showTab('courses')">Courses</button>
+    <button onclick="showTab('faculty')">Faculty</button>
+    <button onclick="showTab('enroll')">Course Registration</button>
+    <button onclick="showTab('marks')">Marks & Results</button>
+  </div>
+
+  <!-- STUDENTS -->
+  <div id="students" class="tab">
+    <h2>Add/Update Student</h2>
+    <input id="s_id" placeholder="Student ID">
+    <input id="s_name" placeholder="Name">
+    <input id="s_phone" placeholder="Phone">
+    <button onclick="addStudent()">Save Student</button>
+    <div id="student_list"></div>
+  </div>
+
+  <!-- COURSES -->
+  <div id="courses" class="tab" style="display:none">
+    <h2>Courses</h2>
+    <input id="c_id" placeholder="Course ID">
+    <input id="c_name" placeholder="Course Name">
+    <input id="c_credits" placeholder="Credits">
+    <button onclick="addCourse()">Save Course</button>
+    <div id="course_list"></div>
+  </div>
+
+  <!-- FACULTY -->
+  <div id="faculty" class="tab" style="display:none">
+    <h2>Faculty</h2>
+    <input id="f_id" placeholder="Faculty ID">
+    <input id="f_name" placeholder="Name">
+    <input id="f_dept" placeholder="Department">
+    <button onclick="addFaculty()">Save Faculty</button>
+    <div id="faculty_list"></div>
+  </div>
+
+  <!-- ENROLL -->
+  <div id="enroll" class="tab" style="display:none">
+    <h2>Course Registration</h2>
+    <select id="e_student"></select>
+    <select id="e_course"></select>
+    <button onclick="enrollStudent()">Enroll</button>
+    <div id="enroll_list"></div>
+  </div>
+
+  <!-- MARKS -->
+  <div id="marks" class="tab" style="display:none">
+    <h2>Marks & Results</h2>
+    <select id="m_student"></select>
+    <select id="m_course"></select>
+    <input id="m_marks" placeholder="Marks" type="number">
+    <button onclick="addMarks()">Add Marks</button>
+    <div id="marks_list"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

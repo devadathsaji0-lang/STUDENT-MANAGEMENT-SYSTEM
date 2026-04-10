@@ -1,0 +1,41 @@
+body { 
+  font-family: Arial; 
+  padding: 10px; 
+  background: #1e1e1e; 
+  color: #fff; 
+}
+
+input, select, button { 
+  width: 100%; 
+  padding: 8px; 
+  margin: 5px 0; 
+  background: #2d2d2d; 
+  color: #fff; 
+  border: 1px solid #444; 
+}
+
+button { 
+  background: #007acc; 
+  border: none; 
+}
+
+.tabs button { 
+  width: 19%; 
+  font-size: 12px; 
+}
+
+.tab { 
+  margin-top: 15px; 
+}
+
+table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  margin-top: 10px; 
+}
+
+td, th { 
+  border: 1px solid #444; 
+  padding: 5px; 
+  font-size: 12px; 
+}
