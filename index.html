@@ -7,6 +7,7 @@
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="loginScreen" style="max-width:400px; margin:50px auto; padding:20px; background:#fff; color:#000; border-radius:8px;">
   <h2>Login</h2>
   <select id="userRole">
@@ -19,28 +20,43 @@
   <p id="loginError" style="color:red"></p>
 </div>
 
+<!-- MAIN APP -->
 <div id="app" style="display:none">
   <h1>Student Management System</h1>
   <button onclick="logout()" id="logoutBtn" style="float:right;">Logout</button>
 
+  <!-- TABS -->
   <div class="tabs">
     <button onclick="showTab('students')">Students</button>
     <button onclick="showTab('courses')">Courses</button>
     <button onclick="showTab('faculty')">Faculty</button>
     <button onclick="showTab('enroll')">Course Registration</button>
-    <button onclick="showTab('marks')">Marks & Results</button>
+    <button onclick="showTab('marks')">Grade Card</button>
     <button onclick="showTab('attendance')" id="attendanceTabBtn">Attendance</button>
   </div>
 
+  <!-- STUDENTS -->
   <div id="students" class="tab">
     <h2>Add/Update Student</h2>
-    <input id="s_id" placeholder="Student ID">
-    <input id="s_name" placeholder="Name">
-    <input id="s_phone" placeholder="Phone">
-    <button onclick="addStudent()">Save Student</button>
+    <div class="student-form">
+      <div class="photo-upload">
+        <img id="s_photo_preview" src="https://via.placeholder.com/120x150?text=Photo">
+        <input type="file" id="s_photo" accept="image/*" onchange="previewPhoto(event)">
+        <label for="s_photo">Upload Photo</label>
+      </div>
+
+      <div>
+        <input id="s_id" placeholder="Student ID">
+        <input id="s_name" placeholder="Name">
+        <input id="s_phone" placeholder="Phone">
+        <input id="s_course" placeholder="Course/Branch">
+        <button onclick="addStudent()">Save Student</button>
+      </div>
+    </div>
     <div id="student_list"></div>
   </div>
 
+  <!-- COURSES -->
   <div id="courses" class="tab" style="display:none">
     <h2>Courses</h2>
     <input id="c_id" placeholder="Course ID">
@@ -50,6 +66,7 @@
     <div id="course_list"></div>
   </div>
 
+  <!-- FACULTY -->
   <div id="faculty" class="tab" style="display:none">
     <h2>Faculty</h2>
     <input id="f_id" placeholder="Faculty ID">
@@ -59,6 +76,7 @@
     <div id="faculty_list"></div>
   </div>
 
+  <!-- ENROLL -->
   <div id="enroll" class="tab" style="display:none">
     <h2>Course Registration</h2>
     <select id="e_student"></select>
@@ -67,20 +85,20 @@
     <div id="enroll_list"></div>
   </div>
 
+  <!-- MARKS -->
   <div id="marks" class="tab" style="display:none">
-    <h2>Marks & Results</h2>
-    <select id="m_student"></select>
-    <select id="m_course"></select>
-    <input id="m_marks" placeholder="Marks" type="number">
-    <button onclick="addMarks()">Add Marks</button>
-    <div id="marks_list"></div>
+    <h2>Semester Grade Card</h2>
+    <select id="m_student" onchange="loadStudentGradeCard()"></select>
+    <div id="gradeCardContainer"></div>
   </div>
 
+  <!-- ATTENDANCE -->
   <div id="attendance" class="tab" style="display:none">
     <h2>Attendance</h2>
     <input type="date" id="attendanceDate" onchange="loadAttendance()">
     <div id="attendanceList"></div>
     <button onclick="saveAttendance()">Save Attendance</button>
+
     <h3>Monthly Report</h3>
     <select id="reportMonth" onchange="loadMonthlyReport()">
       <option value="1">Jan</option><option value="2">Feb</option>
@@ -92,6 +110,7 @@
     </select>
     <div id="monthlyReport"></div>
   </div>
+
 </div>
 
 <script src="script.js"></script>
