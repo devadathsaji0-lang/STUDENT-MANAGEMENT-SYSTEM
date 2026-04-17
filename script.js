@@ -1,106 +1,49 @@
-// ========== DATABASE + DEMO DATA ==========
-const TEACHER_ACCOUNTS = [
-  {username: "teacher", password: "1234"},
-  {username: "admin", password: "1234"},
-  {username: "principal", password: "1234"}
-];
-
-let savedStudents = JSON.parse(localStorage.getItem('students') || '[]');
-
-const db = {
-  students: savedStudents,
-  courses: JSON.parse(localStorage.getItem('courses') || '[]'),
-  faculty: JSON.parse(localStorage.getItem('faculty') || '[]'),
-  enroll: JSON.parse(localStorage.getItem('enroll') || '[]'),
-  marks: JSON.parse(localStorage.getItem('marks') || '[]')
+// ========== DATA ==========
+let db = JSON.parse(localStorage.getItem('sms_data')) || {
+  students: [], courses: [], faculty: [], enrollments: [],
+  attendance: {}, marks: {}, photos: {}
 };
 
-// ========== GRADE CALCULATION ==========
-function getGrade(marks) {
-  const m = parseInt(marks);
-  if(m >= 90) return {grade: 'A+', status: 'Pass'};
-  if(m >= 80) return {grade: 'A', status: 'Pass'};
-  if(m >= 70) return {grade: 'B+', status: 'Pass'};
-  if(m >= 60) return {grade: 'B', status: 'Pass'};
-  if(m >= 50) return {grade: 'C', status: 'Pass'};
-  if(m >= 40) return {grade: 'D', status: 'Pass'};
-  return {grade: 'F', status: 'Fail'};
+let currentUser = '', currentRole = '', tempPhoto = '';
+
+function saveDB() {
+  localStorage.setItem('sms_data', JSON.stringify(db));
 }
 
-// ========== EMAIL VALIDATION ==========
-function isValidEmail(email) {
-  return email.includes('@') && email.includes('.');
-}
-
-// ========== LOGIN SYSTEM ==========
-let currentUser = null;
-let currentRole = null;
-
+// ========== LOGIN ==========
 function login() {
   const role = document.getElementById('userRole').value;
-  const user = document.getElementById('username').value.trim();
+  const user = document.getElementById('username').value;
   const pass = document.getElementById('password').value;
-  
-  if(role === 'teacher') {
-    const teacher = TEACHER_ACCOUNTS.find(t => t.username === user && t.password === pass);
-    if(teacher) {
-      currentUser = user;
-      currentRole = 'teacher';
-      showApp();
-    } else {
-      document.getElementById('loginError').innerText = 'Invalid teacher credentials';
-    }
-  } else if(role === 'student') {
-    // NEW: Username must be email, any password accepted
-    if(!user) {
-      document.getElementById('loginError').innerText = 'Enter email ID';
-      return;
-    }
-    if(!isValidEmail(user)) {
-      document.getElementById('loginError').innerText = 'Student username must be email ID';
-      return;
-    }
-    if(!pass) {
-      document.getElementById('loginError').innerText = 'Enter any password';
-      return;
-    }
-    
-    // Auto-create student with email, accept ANY password
-    let student = db.students.find(s => s.id === user);
-    if(!student) {
-      const name = user.split('@')[0]; // Use part before @ as name
-      student = {id: user, name: name, phone: ""};
-      db.students.push(student);
-      localStorage.setItem('students', JSON.stringify(db.students));
-    }
-    
+
+  if (!user || !pass) {
+    document.getElementById('loginError').innerText = 'Enter all fields';
+    return;
+  }
+
+  if (role === 'teacher' && user === 'admin' && pass === '1234') {
+    currentUser = user;
+    currentRole = 'teacher';
+  } else if (role === 'student' && db.students.some(s => s.id === user && pass === '1234')) {
     currentUser = user;
     currentRole = 'student';
-    showApp();
   } else {
-    document.getElementById('loginError').innerText = 'Select a role';
+    document.getElementById('loginError').innerText = 'Invalid credentials';
+    return;
   }
+
+  localStorage.setItem('loggedIn', JSON.stringify({ user, role: currentRole }));
+  showApp();
 }
 
 function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
-  localStorage.setItem('loggedIn', JSON.stringify({
-    user: currentUser,
-    role: currentRole
-  }));
-  
-  if(currentRole === 'student') {
-    ['students','courses','faculty','enroll'].forEach(id => {
-      const el = document.getElementById(id);
-      if(el) el.style.display = 'none';
-    });
-    showTab('marks');
-  }
-  
+
+  const btn = document.getElementById('attendanceTabBtn');
+  if (btn) btn.style.display = currentRole === 'teacher' ? 'block' : 'none';
+
   refreshAll();
-  loadAttendance();
 }
 
 function logout() {
@@ -108,285 +51,129 @@ function logout() {
   location.reload();
 }
 
-// ========== STUDENT FUNCTIONS ==========
+// ========== PHOTO ==========
+function previewPhoto(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      tempPhoto = e.target.result;
+      document.getElementById('s_photo_preview').src = tempPhoto;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// ========== STUDENTS ==========
 function addStudent() {
-  const id = document.getElementById('s_id').value.trim();
-  const name = document.getElementById('s_name').value.trim();
-  const phone = document.getElementById('s_phone').value.trim();
-  
-  if(!id ||!name) {
-    alert('ID and Name required');
-    return;
-  }
-  
-  if(!isValidEmail(id)) {
-    alert('Student ID must be an email');
-    return;
-  }
-  
-  const exists = db.students.find(s => s.id === id);
-  if(exists) {
-    exists.name = name;
-    exists.phone = phone;
-  } else {
-    db.students.push({id, name, phone});
-  }
-  
-  localStorage.setItem('students', JSON.stringify(db.students));
-  document.getElementById('s_id').value = '';
-  document.getElementById('s_name').value = '';
-  document.getElementById('s_phone').value = '';
+  const id = document.getElementById('s_id').value;
+  const name = document.getElementById('s_name').value;
+  const phone = document.getElementById('s_phone').value;
+  const course = document.getElementById('s_course').value;
+
+  if (!id || !name) return alert('ID and Name required');
+
+  const idx = db.students.findIndex(s => s.id === id);
+  if (idx >= 0) db.students[idx] = { id, name, phone, course };
+  else db.students.push({ id, name, phone, course });
+
+  if (tempPhoto) db.photos[id] = tempPhoto;
+  if (!db.marks[id]) db.marks[id] = { sem: {}, cgpa: 0 };
+
+  saveDB();
   refreshStudents();
+  clearStudentForm();
+}
+
+function clearStudentForm() {
+  ['s_id','s_name','s_phone','s_course'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('s_photo_preview').src =
+    'https://via.placeholder.com/120x150?text=Photo';
+  tempPhoto = '';
 }
 
 function refreshStudents() {
-  db.students = JSON.parse(localStorage.getItem('students') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>Email ID</th><th>Name</th><th>Phone</th></tr>';
+  let html = '<table><tr><th>Photo</th><th>ID</th><th>Name</th><th>Phone</th><th>Course</th><th>CGPA</th><th>Action</th></tr>';
+
   db.students.forEach(s => {
-    html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.phone}</td></tr>`;
-  });
-  html += '</table>';
-  document.getElementById('student_list').innerHTML = html;
-  updateDropdowns();
-}
+    const photo = db.photos[s.id] || 'https://via.placeholder.com/40x50?text=No+Photo';
+    const cgpa = db.marks[s.id]?.cgpa?.toFixed(2) || '0.00';
 
-// ========== COURSE FUNCTIONS ==========
-function addCourse() {
-  const id = document.getElementById('c_id').value.trim();
-  const name = document.getElementById('c_name').value.trim();
-  const credits = document.getElementById('c_credits').value.trim();
-  if(!id ||!name) {
-    alert('Course ID and Name required');
-    return;
-  }
-  db.courses.push({id, name, credits});
-  localStorage.setItem('courses', JSON.stringify(db.courses));
-  refreshCourses();
-}
-
-function refreshCourses() {
-  db.courses = JSON.parse(localStorage.getItem('courses') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>ID</th><th>Name</th><th>Credits</th></tr>';
-  db.courses.forEach(c => {
-    html += `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.credits}</td></tr>`;
-  });
-  html += '</table>';
-  document.getElementById('course_list').innerHTML = html;
-  updateDropdowns();
-}
-
-// ========== FACULTY FUNCTIONS ==========
-function addFaculty() {
-  const id = document.getElementById('f_id').value.trim();
-  const name = document.getElementById('f_name').value.trim();
-  const dept = document.getElementById('f_dept').value.trim();
-  if(!id ||!name) {
-    alert('Faculty ID and Name required');
-    return;
-  }
-  db.faculty.push({id, name, dept});
-  localStorage.setItem('faculty', JSON.stringify(db.faculty));
-  refreshFaculty();
-}
-
-function refreshFaculty() {
-  db.faculty = JSON.parse(localStorage.getItem('faculty') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>ID</th><th>Name</th><th>Dept</th></tr>';
-  db.faculty.forEach(f => {
-    html += `<tr><td>${f.id}</td><td>${f.name}</td><td>${f.dept}</td></tr>`;
-  });
-  html += '</table>';
-  document.getElementById('faculty_list').innerHTML = html;
-}
-
-// ========== ENROLL FUNCTIONS ==========
-function enrollStudent() {
-  const studentId = document.getElementById('e_student').value;
-  const courseId = document.getElementById('e_course').value;
-  if(!studentId ||!courseId) {
-    alert('Select both student and course');
-    return;
-  }
-  db.enroll.push({studentId, courseId});
-  localStorage.setItem('enroll', JSON.stringify(db.enroll));
-  refreshEnroll();
-}
-
-function refreshEnroll() {
-  db.enroll = JSON.parse(localStorage.getItem('enroll') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px"><tr><th>Student Email</th><th>Course</th></tr>';
-  db.enroll.forEach(e => {
-    html += `<tr><td>${e.studentId}</td><td>${e.courseId}</td></tr>`;
-  });
-  html += '</table>';
-  document.getElementById('enroll_list').innerHTML = html;
-}
-
-// ========== MARKS FUNCTIONS WITH GRADE ==========
-function addMarks() {
-  const studentId = document.getElementById('m_student').value;
-  const courseId = document.getElementById('m_course').value;
-  const marks = document.getElementById('m_marks').value;
-  
-  if(!studentId ||!courseId ||!marks) {
-    alert('Fill all fields');
-    return;
-  }
-  
-  if(marks < 0 || marks > 100) {
-    alert('Marks must be 0-100');
-    return;
-  }
-  
-  const existing = db.marks.findIndex(m => m.studentId === studentId && m.courseId === courseId);
-  if(existing >= 0) {
-    db.marks[existing].marks = marks;
-  } else {
-    db.marks.push({studentId, courseId, marks});
-  }
-  
-  localStorage.setItem('marks', JSON.stringify(db.marks));
-  document.getElementById('m_marks').value = '';
-  refreshMarks();
-}
-
-function refreshMarks() {
-  db.marks = JSON.parse(localStorage.getItem('marks') || '[]');
-  let html = '<table border="1" style="width:100%; margin-top:10px; border-collapse:collapse"><tr><th>Student Email</th><th>Course</th><th>Marks</th><th>Grade</th><th>Result</th></tr>';
-  
-  db.marks.forEach(m => {
-    if(currentRole === 'teacher' || currentUser === m.studentId) {
-      const g = getGrade(m.marks);
-      const color = g.status === 'Pass'? 'green' : 'red';
-      html += `<tr>
-        <td>${m.studentId}</td>
-        <td>${m.courseId}</td>
-        <td>${m.marks}</td>
-        <td><b>${g.grade}</b></td>
-        <td style="color:${color}"><b>${g.status}</b></td>
-      </tr>`;
-    }
-  });
-  html += '</table>';
-  document.getElementById('marks_list').innerHTML = html;
-}
-
-// ========== ATTENDANCE SYSTEM ==========
-function loadAttendance() {
-  const date = document.getElementById('attendanceDate').value;
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
-  const dayData = attendance[date] || {};
-  
-  let html = '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>Email ID</th><th>Name</th><th>Present</th></tr>';
-  db.students.forEach(s => {
-    const checked = dayData[s.id]? 'checked' : '';
-    const disabled = currentRole === 'student'? 'disabled' : '';
     html += `<tr>
+      <td><img src="${photo}" style="width:40px;height:50px"></td>
       <td>${s.id}</td>
       <td>${s.name}</td>
-      <td><input type="checkbox" class="attCheck" data-id="${s.id}" ${checked} ${disabled}></td>
+      <td>${s.phone || '-'}</td>
+      <td>${s.course || '-'}</td>
+      <td>${cgpa}</td>
+      <td>
+        <button onclick="editStudent('${s.id}')">Edit</button>
+        <button onclick="delStudent('${s.id}')">Del</button>
+      </td>
     </tr>`;
   });
-  html += '</table>';
-  document.getElementById('attendanceList').innerHTML = html;
-  loadMonthlyReport();
+
+  document.getElementById('student_list').innerHTML = html + '</table>';
+  updateDropdowns();
 }
 
-function saveAttendance() {
-  if (currentRole!== 'teacher') {
-    alert('Only teacher allowed');
-    return;
+function editStudent(id) {
+  const s = db.students.find(s => s.id === id);
+  if (!s) return;
+
+  document.getElementById('s_id').value = s.id;
+  document.getElementById('s_name').value = s.name;
+  document.getElementById('s_phone').value = s.phone;
+  document.getElementById('s_course').value = s.course || '';
+
+  if (db.photos[id]) {
+    document.getElementById('s_photo_preview').src = db.photos[id];
   }
-  const date = document.getElementById('attendanceDate').value;
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
-  attendance[date] = {};
-  document.querySelectorAll('.attCheck').forEach(box => {
-    attendance[date][box.dataset.id] = box.checked;
-  });
-  localStorage.setItem('attendance', JSON.stringify(attendance));
-  alert('Saved!');
-  loadMonthlyReport();
 }
 
-function loadMonthlyReport() {
-  const month = document.getElementById('reportMonth').value;
-  const year = new Date().getFullYear();
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '{}');
-  let totalDays = 0;
-  
-  for (let d in attendance) {
-    if (d.startsWith(`${year}-${String(month).padStart(2,'0')}`)) {
-      totalDays++;
-    }
-  }
-  
-  let html = `<p><b>Total Working Days: ${totalDays}</b></p>`;
-  html += '<table border="1" style="width:100%; border-collapse:collapse"><tr><th>Email ID</th><th>Name</th><th>Present</th><th>%</th></tr>';
-  
-  db.students.forEach(s => {
-    let present = 0;
-    for (let d in attendance) {
-      if (d.startsWith(`${year}-${String(month).padStart(2,'0')}`) && attendance[d][s.id]) {
-        present++;
-      }
-    }
-    const percent = totalDays? ((present / totalDays) * 100).toFixed(1) : 0;
-    if (currentRole === 'teacher' || currentUser === s.id) {
-      html += `<tr><td>${s.id}</td><td>${s.name}</td><td>${present}</td><td>${percent}%</td></tr>`;
-    }
-  });
-  html += '</table>';
-  document.getElementById('monthlyReport').innerHTML = html;
-}
+function delStudent(id) {
+  if (!confirm('Delete student?')) return;
 
-// ========== UTILS ==========
-function showTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
-  document.getElementById(tab).style.display = 'block';
-  if(tab === 'attendance') loadAttendance();
-  if(tab === 'marks') refreshMarks();
-}
+  db.students = db.students.filter(s => s.id !== id);
+  delete db.photos[id];
+  delete db.marks[id];
 
-function refreshAll() {
+  saveDB();
   refreshStudents();
-  refreshCourses();
-  refreshFaculty();
-  refreshEnroll();
-  refreshMarks();
 }
 
-function updateDropdowns() {
-  const studentSelects = ['e_student', 'm_student'];
-  const courseSelects = ['e_course', 'm_course'];
-  
-  studentSelects.forEach(id => {
-    const sel = document.getElementById(id);
-    if(sel) {
-      sel.innerHTML = '<option value="">Select Student</option>';
-      db.students.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.id} - ${s.name}</option>`);
-    }
-  });
-  
-  courseSelects.forEach(id => {
-    const sel = document.getElementById(id);
-    if(sel) {
-      sel.innerHTML = '<option value="">Select Course</option>';
-      db.courses.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.id} - ${c.name}</option>`);
-    }
-  });
+// ========== GRADE CARD FIX ==========
+function updateSub(sid, sem, idx, field, val) {
+  if (!db.marks[sid] || !db.marks[sid].sem[sem]) return;
+
+  db.marks[sid].sem[sem][idx][field] =
+    field === 'subject' ? val : Number(val || 0);
+
+  saveDB();
+
+  //  IMPORTANT FIX → avoid infinite reload
+  setTimeout(() => loadSemData(sid), 100);
 }
 
 // ========== AUTO LOGIN ==========
 window.onload = function () {
   const saved = JSON.parse(localStorage.getItem('loggedIn') || 'null');
+
   if (saved) {
     currentUser = saved.user;
     currentRole = saved.role;
+
     document.getElementById('userRole').value = currentRole;
     document.getElementById('username').value = currentUser;
     document.getElementById('password').value = '1234';
+
     showApp();
   }
-  document.getElementById('reportMonth').value = new Date().getMonth() + 1;
+
+  const month = document.getElementById('reportMonth');
+  if (month) month.value = new Date().getMonth() + 1;
+
   refreshAll();
 };
