@@ -1,41 +1,181 @@
-body { 
-  font-family: Arial; 
-  padding: 10px; 
-  background: #1e1e1e; 
-  color: #fff; 
+body {
+  font-family: Arial;
+  padding: 10px;
+  background: #1e1e1e;
+  color: #fff;
 }
 
-input, select, button { 
-  width: 100%; 
-  padding: 8px; 
-  margin: 5px 0; 
-  background: #2d2d2d; 
-  color: #fff; 
-  border: 1px solid #444; 
+input, select, button {
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  background: #2d2d2d;
+  color: #fff;
+  border: 1px solid #444;
+  box-sizing: border-box;
 }
 
-button { 
-  background: #007acc; 
-  border: none; 
+button {
+  background: #007acc;
+  border: none;
+  cursor: pointer;
 }
 
-.tabs button { 
-  width: 19%; 
-  font-size: 12px; 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-.tab { 
-  margin-top: 15px; 
+.tabs button {
+  flex: 1;
+  min-width: 80px;
+  font-size: 12px;
 }
 
-table { 
-  width: 100%; 
-  border-collapse: collapse; 
-  margin-top: 10px; 
+.tab {
+  margin-top: 15px;
 }
 
-td, th { 
-  border: 1px solid #444; 
-  padding: 5px; 
-  font-size: 12px; 
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+td, th {
+  border: 1px solid #444;
+  padding: 5px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.student-form {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.photo-upload img {
+  width: 120px;
+  height: 150px;
+  border: 2px solid #444;
+  object-fit: cover;
+  background: #2d2d2d;
+}
+
+.photo-upload input {
+  display: none;
+}
+
+.photo-upload label {
+  background: #007acc;
+  color: #fff;
+  padding: 6px;
+  text-align: center;
+  margin-top: 5px;
+  display: block;
+  cursor: pointer;
+}
+
+.grade-card-header {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  background: #2d2d2d;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.grade-card-header img {
+  width: 100px;
+  height: 120px;
+  border: 2px solid #444;
+  object-fit: cover;
+}
+
+.grade-card-header h3 {
+  margin: 5px 0;
+}
+
+.cgpa-box {
+  background: #007acc;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 15px;
+  font-size: 18px;
+}
+
+.pass {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.fail {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.semester-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+
+.sem-tab {
+  padding: 8px 12px;
+  border: 1px solid #444;
+  background: #2d2d2d;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sem-tab.active {
+  background: #007acc;
+}
+
+.sem-content {
+  display: none;
+}
+
+.sem-content.active {
+  display: block;
+}
+
+.sem-result {
+  margin-top: 10px;
+  font-weight: bold;
+  display: flex;
+  gap: 20px;
+}
+
+/* PRINT STYLES */
+@media print {
+  .tabs,
+  button,
+  .photo-upload label,
+  #m_student,
+  .sem-tab {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .sem-content {
+    display: block !important;
+  }
+
+  .grade-card-header {
+    background: #f1f1f1;
+  }
+
+  input {
+    border: none;
+    background: transparent;
+    color: #000;
+  }
 }
