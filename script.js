@@ -39,7 +39,7 @@ function autoLogin() {
   refreshAll();
 }
 
-// ========== LOGIN ==========
+// ========== LOGIN - FIXED FOR teacher@college.com ==========
 function login() {
   const role = document.getElementById('userRole').value;
   const user = document.getElementById('username').value.trim();
@@ -50,10 +50,11 @@ function login() {
   if (!user ||!pass) return err.textContent = 'Enter username and password';
 
   if (role === 'teacher') {
-    if (user === 'admin' && pass.length > 0) {
+    const teacherEmails = ['teacher@college.com', 'teacher@school.com', 'admin'];
+    if (teacherEmails.includes(user) && pass.length > 0) {
       currentUser = user; currentRole = 'teacher';
     } else {
-      return err.textContent = 'Wrong teacher credentials. Use: admin / any password';
+      return err.textContent = 'Wrong teacher credentials. Use: teacher@college.com / any password';
     }
   } else {
     if (db.students.some(s => s.id === user) && pass.length > 0) {
@@ -325,10 +326,10 @@ function loadSemData(sid){
       const {grade,point} = getGradePoint(sub.marks);
       sub.grade = grade; sub.point = point;
       const row = table.insertRow(-1);
-      let html = `<td>${currentRole==='teacher'?`<input value="${sub.subject}" oninput="updateSub('${sid}',${sem},${idx},'subject',this.value)">`:sub.subject}</td>
+      let html = `<td>${currentRole==='teacher'?`<input value="${sub.subject}" oninput="updateSub('${sid}',${sem},${idx},'subject',this.value)">`:sub.subject||'-'}</td>
         <td>${currentRole==='teacher'?`<input type="number" value="${sub.marks}" oninput="updateSub('${sid}',${sem},${idx},'marks',this.value)">`:sub.marks}</td>
         <td>${currentRole==='teacher'?`<input type="number" value="${sub.credit}" oninput="updateSub('${sid}',${sem},${idx},'credit',this.value)">`:sub.credit}</td>
-        <td>${grade}</td><td class="${point>0?'pass':'fail'}">${point>0?'Pass':'Fail'}</td>`;
+        <td>${grade}</td><td class="${point>0?'pass':'fail'}">${sub.subject? (point>0?'Pass':'Fail') : '-'}</td>`;
       if(currentRole==='teacher') html+=`<td><button onclick="delSub('${sid}',${sem},${idx})">X</button></td>`;
       row.innerHTML = html;
     });
@@ -351,7 +352,7 @@ function calcSemSGPA(sid,sem){
   const semData = db.marks[sid]?.sem[sem] || [];
   let totalCredit=0, totalPoint=0, fail=0, hasMarks=false;
   semData.forEach(sub=>{
-    if(sub.marks>=0 && sub.subject){
+    if(sub.subject && sub.marks>=0){
       hasMarks=true;
       totalCredit += Number(sub.credit)||0;
       totalPoint += sub.point * (Number(sub.credit)||0);
@@ -476,4 +477,4 @@ function updateDropdowns() {
       db.courses.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.id} - ${c.name}</option>`);
     }
   });
-    }
+      }
