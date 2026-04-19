@@ -1,76 +1,106 @@
-const API_URL = 'https://college-api-pohn.onrender.com/attendance';
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-// Login Logic - Simple
-document.getElementById('loginBtn').onclick = () => {
-  const user = document.getElementById('username').value;
-  if (!user) {
-    document.getElementById('loginError').innerText = 'Enter Username';
-    return;
-  }
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-};
+<div id="loginScreen">
+  <h2>Login</h2>
+  <select id="userRole">
+    <option value="teacher">Teacher</option>
+    <option value="student">Student</option>
+  </select>
+  <input type="text" id="username" placeholder="Username/ID">
+  <input type="password" id="password" placeholder="Password">
+  <button id="loginBtn">Login</button>
+  <p id="loginError"></p>
+  <p style="font-size:12px;color:#666;">Teacher: admin / any password<br>Student: StudentID / any password</p>
+</div>
 
-document.getElementById('logoutBtn').onclick = () => {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'block';
-};
+<div id="app" style="display:none">
+  <div class="header">
+    <h1>Student Management System</h1>
+    <button id="logoutBtn">Logout</button>
+  </div>
 
-// Tab Switching
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-  };
-});
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="students">Students</button>
+    <button class="tab-btn" data-tab="courses">Courses</button>
+    <button class="tab-btn" data-tab="faculty">Faculty</button>
+    <button class="tab-btn" data-tab="enroll">Registration</button>
+    <button class="tab-btn" data-tab="marks">Grade Card</button>
+    <button class="tab-btn" data-tab="attendance" id="attendanceTabBtn">Attendance</button>
+  </div>
 
-// ATTENDANCE LOGIC - ഇത് മാത്രം Backend-മായി Connect ആയി
-async function loadAttendance() {
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    
-    // 1. Show all attendance records in a list
-    let html = '<table border="1"><tr><th>Name</th><th>Status</th><th>Date</th></tr>';
-    data.forEach(i => {
-      html += `<tr><td>${i.name}</td><td>${i.status}</td><td>${i.date}</td></tr>`;
-    });
-    document.getElementById('monthlyReport').innerHTML = html + '</table>';
-    
-    // 2. Simple mark attendance form
-    document.getElementById('attendanceList').innerHTML = `
-      <input type="text" id="att_name" placeholder="Student Name">
-      <select id="att_status"><option>Present</option><option>Absent</option></select>
-    `;
-    
-  } catch (err) {
-    document.getElementById('monthlyReport').innerHTML = 'Error loading: ' + err;
-  }
-}
+  <div id="students" class="tab active">
+    <h2>Add/Update Student</h2>
+    <div class="student-form">
+      <div class="photo-upload">
+        <img id="s_photo_preview" src="https://via.placeholder.com/120x150?text=Photo">
+        <input type="file" id="s_photo" accept="image/*">
+        <label for="s_photo">Upload Photo</label>
+      </div>
+      <div>
+        <input id="s_id" placeholder="Student ID">
+        <input id="s_name" placeholder="Name">
+        <input id="s_phone" placeholder="Phone">
+        <input id="s_course" placeholder="Course/Branch">
+        <button id="saveStudentBtn">Save Student</button>
+      </div>
+    </div>
+    <div id="student_list"></div>
+  </div>
 
-document.getElementById('saveAttendanceBtn').onclick = async () => {
-  const name = document.getElementById('att_name').value;
-  const status = document.getElementById('att_status').value;
-  const date = document.getElementById('attendanceDate').value || new Date().toLocaleDateString();
-  
-  if (!name) return alert('Enter name');
-  
-  await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, status, date })
-  });
-  
-  document.getElementById('att_name').value = '';
-  loadAttendance(); // Refresh list
-};
+  <div id="courses" class="tab">
+    <h2>Courses</h2>
+    <input id="c_id" placeholder="Course ID">
+    <input id="c_name" placeholder="Course Name">
+    <input id="c_credits" placeholder="Credits" type="number">
+    <button id="saveCourseBtn">Save Course</button>
+    <div id="course_list"></div>
+  </div>
 
-// Load attendance when page opens
-loadAttendance();
+  <div id="faculty" class="tab">
+    <h2>Faculty</h2>
+    <input id="f_id" placeholder="Faculty ID">
+    <input id="f_name" placeholder="Name">
+    <input id="f_dept" placeholder="Department">
+    <button id="saveFacultyBtn">Save Faculty</button>
+    <div id="faculty_list"></div>
+  </div>
 
-// ബാക്കി Tabs-ന് ഇപ്പൊ Dummy Data
-document.getElementById('saveStudentBtn').onclick = () => alert('Student API not ready yet. Only Attendance works.');
-document.getElementById('saveCourseBtn').onclick = () => alert('Course API not ready yet.');
-document.getElementById('saveFacultyBtn').onclick = () => alert('Faculty API not ready yet.');
+  <div id="enroll" class="tab">
+    <h2>Course Registration</h2>
+    <select id="e_student"></select>
+    <select id="e_course"></select>
+    <button id="enrollBtn">Enroll</button>
+    <div id="enroll_list"></div>
+  </div>
+
+  <div id="marks" class="tab">
+    <h2>Semester Grade Card</h2>
+    <select id="m_student"></select>
+    <div id="gradeCardContainer"></div>
+  </div>
+
+  <div id="attendance" class="tab">
+    <h2>Attendance</h2>
+    <input type="date" id="attendanceDate">
+    <div id="attendanceList"></div>
+    <button id="saveAttendanceBtn">Save Attendance</button>
+    <h3>Monthly Report</h3>
+    <select id="reportMonth">
+      <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+      <option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option>
+      <option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+    </select>
+    <div id="monthlyReport"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
